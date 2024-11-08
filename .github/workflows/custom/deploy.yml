@@ -1,0 +1,32 @@
+name: Deploy to GitHub Pages
+
+description: "Reusable workflow to deploy an Angular app to the gh-pages branch for GitHub Pages."
+
+on:
+  workflow_call:
+    inputs:
+      publish_dir:
+        description: "Directory with build output to publish"
+        required: true
+      gh_token:
+        description: "GitHub Token for authentication"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code to access deployment files
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Deploy to GitHub Pages on gh-pages branch
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ inputs.gh_token }}
+          publish_dir: ${{ inputs.publish_dir }}
+          publish_branch: gh-pages           # Explicitly set the branch to gh-pages
+          force_orphan: true                 # Create a new commit history to ensure a clean deployment
+          allow_empty_commit: false          # Optional, prevent empty commits if nothing changes

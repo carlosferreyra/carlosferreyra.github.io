@@ -1,0 +1,62 @@
+name: Build Angular App
+
+description: "Reusable workflow to build an Angular app for deployment."
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        default: "16.x"
+      angular-version:
+        description: "Angular CLI version to install"
+        required: false
+        default: "16.0.0"  # Update based on the Angular version in your project
+      base-href:
+        description: "Base URL for the Angular app (for GitHub Pages)"
+        required: true
+      cache-key:
+        description: "Key for caching dependencies"
+        required: false
+        default: "angular-build-cache"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Node.js
+      - name: Set up Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: "npm"
+
+      # Install Angular CLI globally
+      - name: Install Angular CLI
+        run: npm install -g @angular/cli@${{ inputs.angular-version }}
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Cache dependencies
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ inputs.cache-key }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.cache-key }}-
+            ${{ runner.os }}-build-
+
+      # Build the Angular app
+      - name: Build Angular App
+        run: ng build --configuration=production --base-href "${{ inputs.base-href }}"
+        env:
+          NODE_ENV: "production"

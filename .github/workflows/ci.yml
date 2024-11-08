@@ -1,0 +1,67 @@
+name: CI and Deploy
+
+on:
+  push:
+    branches:
+      - main          # Runs on push to the main branch
+  pull_request:
+    branches:
+      - main          # Runs on pull requests to main
+
+env:
+  NODE_VERSION: "16.x"
+  ANGULAR_VERSION: "16.0.0"
+  BASE_HREF: "/<repo-name>/"   # Replace with the actual base path
+  PUBLISH_DIR: "./dist/<angular-project-name>"  # Replace with the actual output directory of your Angular project
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write          # Required for GitHub Pages deployment
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Call the setup environment workflow to install dependencies and prepare the environment
+      - name: Setup Environment
+        uses: ./.github/actions/common/setup-env.yml
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          angular-version: ${{ env.ANGULAR_VERSION }}
+          secrets:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Run Linting (using the reusable lint workflow)
+      - name: Lint Code
+        uses: ./.github/actions/common/lint.yml
+        with:
+          lint-command: "npm run lint"
+
+      # Run Tests (using the reusable test workflow)
+      - name: Run Tests
+        uses: ./.github/actions/common/test.yml
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          angular-version: ${{ env.ANGULAR_VERSION }}
+          test-command: "npm test -- --watch=false --browsers=ChromeHeadless"
+
+      # Build the Angular app (using the reusable build workflow)
+      - name: Build Angular App
+        uses: ./.github/actions/common/build.yml
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          angular-version: ${{ env.ANGULAR_VERSION }}
+          base-href: ${{ env.BASE_HREF }}
+          cache-key: "angular-build-cache"
+
+      # Deploy to GitHub Pages (using the reusable deploy workflow, only on push to main)
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push'
+        uses: ./.github/actions/common/deploy.yml
+        with:
+          publish_dir: ${{ env.PUBLISH_DIR }}
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
