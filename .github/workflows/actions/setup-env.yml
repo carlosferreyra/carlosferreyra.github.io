@@ -1,0 +1,72 @@
+name: Setup Environment for Angular Deployment
+
+description: "Reusable workflow to set up the environment for deploying an Angular app to GitHub Pages."
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        default: "16.x"
+      angular-version:
+        description: "Angular CLI version to install"
+        required: false
+        default: "16.0.0"  # Adjust based on your Angular version
+      cache-key:
+        description: "Key for caching dependencies"
+        required: false
+        default: "angular-cache"
+    secrets:
+      GH_TOKEN:
+        description: "GitHub Token for authentication"
+        required: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Node.js
+      - name: Set up Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: "npm"
+
+      # Install Angular CLI globally
+      - name: Install Angular CLI
+        run: npm install -g @angular/cli@${{ inputs.angular-version }}
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Cache dependencies
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ inputs.cache-key }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ inputs.cache-key }}-
+            ${{ runner.os }}-build-
+
+      # Build the Angular application for production
+      - name: Build Angular App
+        run: ng build --configuration=production --base-href "/<repo-name>/"
+        env:
+          NODE_ENV: "production"
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          publish_dir: ./dist/<angular-project-name>
